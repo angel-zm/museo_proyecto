@@ -1,0 +1,13 @@
+﻿# Visual Studio
+.vs/
+*.pdb
+*.exe
+*.dll
+*.obj
+bin/
+obj/
+x64/
+
+# Sistema
+Thumbs.db
+Desktop.ini
