@@ -56,6 +56,7 @@ Model Puerta_Derecha_M;
 Model Puerta_Izquierda_M;
 
 Model Galeria;
+Model Muneco_M;
 
 GLfloat deltaTime = 0.0f;
 GLfloat lastTime = 0.0f;
@@ -135,6 +136,10 @@ int main()
 	
 	Galeria = Model();
 	Galeria.LoadModel("Models/Galeria.fbx");
+
+	// Carga del modelo del muñeco (mantenlo dentro de main)
+	Muneco_M = Model();
+	Muneco_M.LoadModel("Models/bart.obj");
 	
 
 	GLuint uniformProjection = 0, uniformModel = 0, uniformView = 0, uniformEyePosition = 0,
@@ -201,6 +206,24 @@ int main()
 		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
 		GaleriaTexture.UseTexture();
 		Galeria.RenderModel();
+
+		// Render del muñeco (colocado fuera del museo, ajustable)
+		{
+			// Ajusta estos valores hasta que el muñeco quede frente a las escaleras
+			// - munecoWorldPos: posición en coordenadas del mundo (x, y, z)
+			// - munecoScale: escala uniforme (aquí se ha multiplicado por 4 respecto al valor previo)
+			// - munecoRotYdeg: rotación en grados alrededor de Y para mirar hacia la entrada
+			const glm::vec3 munecoWorldPos = glm::vec3(-20.0f, -2.0f, 70.0f); // X negativo => más a la izquierda
+			const float munecoScale = 48.0f; // 12.0f * 4 = 48.0f (cuádruple del tamaño anterior)
+			const float munecoRotYdeg = 180.0f; // orientar hacia museo
+
+			model = glm::mat4(1.0f);
+			model = glm::translate(model, munecoWorldPos);                       // posicionar fuera del museo y a la izquierda
+			model = glm::rotate(model, munecoRotYdeg * toRadians, glm::vec3(0.0f, 1.0f, 0.0f)); // rotación Y
+			model = glm::scale(model, glm::vec3(munecoScale, munecoScale, munecoScale)); // escala uniforme (4x)
+			glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+			Muneco_M.RenderModel();
+		}
 
 
 		glDisable(GL_BLEND);
