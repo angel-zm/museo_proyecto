@@ -1,0 +1,15 @@
+﻿  Window.cpp
+C:\Users\Snow1\Documents\9Noveno\LabCompuGrafica\Practicas\Galeria\Galeria\Window.h(12,36): warning C4244: 'return': conversión de 'GLint' a 'GLfloat'; posible pérdida de datos
+  (compilando archivo de origen "Window.cpp")
+  
+C:\Users\Snow1\Documents\9Noveno\LabCompuGrafica\Practicas\Galeria\Galeria\Window.h(13,37): warning C4244: 'return': conversión de 'GLint' a 'GLfloat'; posible pérdida de datos
+  (compilando archivo de origen "Window.cpp")
+  
+C:\Users\Snow1\Documents\9Noveno\LabCompuGrafica\Practicas\Galeria\Galeria\Window.cpp(158,22): warning C4244: '=': conversión de 'double' a 'GLfloat'; posible pérdida de datos
+C:\Users\Snow1\Documents\9Noveno\LabCompuGrafica\Practicas\Galeria\Galeria\Window.cpp(159,22): warning C4244: '=': conversión de 'double' a 'GLfloat'; posible pérdida de datos
+C:\Users\Snow1\Documents\9Noveno\LabCompuGrafica\Practicas\Galeria\Galeria\Window.cpp(163,28): warning C4244: '=': conversión de 'double' a 'GLfloat'; posible pérdida de datos
+C:\Users\Snow1\Documents\9Noveno\LabCompuGrafica\Practicas\Galeria\Galeria\Window.cpp(164,40): warning C4244: '=': conversión de 'double' a 'GLfloat'; posible pérdida de datos
+C:\Users\Snow1\Documents\9Noveno\LabCompuGrafica\Practicas\Galeria\Galeria\Window.cpp(166,21): warning C4244: '=': conversión de 'double' a 'GLfloat'; posible pérdida de datos
+C:\Users\Snow1\Documents\9Noveno\LabCompuGrafica\Practicas\Galeria\Galeria\Window.cpp(167,21): warning C4244: '=': conversión de 'double' a 'GLfloat'; posible pérdida de datos
+C:\Users\Snow1\Documents\9Noveno\LabCompuGrafica\Practicas\Galeria\Galeria\Window.cpp(81,1): warning C4715: 'Window::Initialise': no todas las rutas de acceso de control devuelven un valor
+  Galeria.vcxproj -> C:\Users\Snow1\Documents\9Noveno\LabCompuGrafica\Practicas\Galeria\x64\Debug\Galeria.exe
