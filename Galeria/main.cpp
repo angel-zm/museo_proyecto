@@ -43,7 +43,6 @@ Texture PuertaTexture;
 Texture DadoTexture;
 Texture GaleriaTexture;
 
-
 Model Kitt_M;
 Model Llanta_M;
 Model Dragon_M;
@@ -78,7 +77,7 @@ void CreateObjects()
 	};
 
 	GLfloat vertices[] = {
-		//	x      y      z			u	  v			nx	  ny    nz
+		//	x      y      z			u	  v			nx	  ny    nz
 			-1.0f, -1.0f, -0.6f,	0.0f, 0.0f,		0.0f, 0.0f, 0.0f,
 			0.0f, -1.0f, 1.0f,		0.5f, 0.0f,		0.0f, 0.0f, 0.0f,
 			1.0f, -1.0f, -0.6f,		1.0f, 0.0f,		0.0f, 0.0f, 0.0f,
@@ -96,7 +95,7 @@ void CreateObjects()
 		-10.0f, 0.0f, 10.0f,	0.0f, 10.0f,	0.0f, -1.0f, 0.0f,
 		10.0f, 0.0f, 10.0f,		10.0f, 10.0f,	0.0f, -1.0f, 0.0f
 	};
-	
+
 
 	Mesh* obj1 = new Mesh();
 	obj1->CreateMesh(vertices, indices, 32, 12);
@@ -128,19 +127,28 @@ int main()
 
 	camera = Camera(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), -60.0f, 0.0f, 0.5f, 0.5f);
 
-	
+	// >>> IMPLEMENTACIÓN 1: Inicialización de la Luz Direccional (Blanca, apuntando hacia abajo) <<<
+	mainLight = DirectionalLight(1.0f, 1.0f, 1.0f, // Color (R, G, B)
+		0.5f, 0.8f,     // Intensidad Ambiente, Intensidad Difusa
+		0.0f, -1.0f, 0.0f); // Dirección (Y negativa = hacia abajo)
+	// >>> FIN IMPLEMENTACIÓN 1 <<<
+
 	pisoTexture = Texture("Textures/Slate_Floor_Tiles_wfribhq_1K_BaseColor.jpg");
 	pisoTexture.LoadTextureA();
 	GaleriaTexture = Texture("Textures/181614_Negro.png");
 	GaleriaTexture.LoadTextureA();
-	
+
 	Galeria = Model();
 	Galeria.LoadModel("Models/Galeria.fbx");
 
-	// Carga del modelo del muñeco (mantenlo dentro de main)
+	// Carga del modelo del muñeco
 	Muneco_M = Model();
 	Muneco_M.LoadModel("Models/bart.obj");
-	
+
+	// >>> IMPLEMENTACIÓN 2: Carga de la textura para el muñeco <<<
+	Texture munecoTexture = Texture("Textures/bart.jpg");
+	munecoTexture.LoadTextureA();
+	// >>> FIN IMPLEMENTACIÓN 2 <<<
 
 	GLuint uniformProjection = 0, uniformModel = 0, uniformView = 0, uniformEyePosition = 0,
 		uniformSpecularIntensity = 0, uniformShininess = 0, uniformTextureOffset = 0;
@@ -172,9 +180,9 @@ int main()
 		uniformView = shaderList[0].GetViewLocation();
 		uniformEyePosition = shaderList[0].GetEyePositionLocation();
 		uniformColor = shaderList[0].getColorLocation();
-		uniformTextureOffset = shaderList[0].getOffsetLocation(); 
+		uniformTextureOffset = shaderList[0].getOffsetLocation();
 
-	
+
 		uniformSpecularIntensity = shaderList[0].GetSpecularIntensityLocation();
 		uniformShininess = shaderList[0].GetShininessLocation();
 
@@ -189,6 +197,7 @@ int main()
 		color = glm::vec3(1.0f, 1.0f, 1.0f);
 		toffset = glm::vec2(0.0f, 0.0f);
 
+		// --- Renderizado del Piso ---
 		glUniform2fv(uniformTextureOffset, 1, glm::value_ptr(toffset));
 		model = glm::mat4(1.0);
 		model = glm::translate(model, glm::vec3(0.0f, -2.0f, 0.0f));
@@ -196,32 +205,42 @@ int main()
 		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
 		glUniform3fv(uniformColor, 1, glm::value_ptr(color));
 		glUniform2fv(uniformTextureOffset, 1, glm::value_ptr(toffset));
+		// Configuracion material por defecto para el piso
+		glUniform1f(uniformSpecularIntensity, 0.1f);
+		glUniform1f(uniformShininess, 2.0f);
 		pisoTexture.UseTexture();
 		meshList[2]->RenderMesh();
 
-		//Carga de la galeria
+		// --- Carga de la galeria ---
 		model = glm::mat4(1.0);
 		model = glm::translate(model, glm::vec3(0.0f, 20.0f, 0.0f));
 		model = glm::rotate(model, -90.0f * toRadians, glm::vec3(1.0f, 0.0f, 0.0f));
 		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		// Configuracion material para la galeria
+		glUniform1f(uniformSpecularIntensity, 0.5f);
+		glUniform1f(uniformShininess, 8.0f);
 		GaleriaTexture.UseTexture();
 		Galeria.RenderModel();
 
-		// Render del muñeco (colocado fuera del museo, ajustable)
+		// --- Render del muñeco (Bart) ---
 		{
-			// Ajusta estos valores hasta que el muñeco quede frente a las escaleras
-			// - munecoWorldPos: posición en coordenadas del mundo (x, y, z)
-			// - munecoScale: escala uniforme (aquí se ha multiplicado por 4 respecto al valor previo)
-			// - munecoRotYdeg: rotación en grados alrededor de Y para mirar hacia la entrada
-			const glm::vec3 munecoWorldPos = glm::vec3(-20.0f, -2.0f, 70.0f); // X negativo => más a la izquierda
-			const float munecoScale = 48.0f; // 12.0f * 4 = 48.0f (cuádruple del tamaño anterior)
-			const float munecoRotYdeg = 180.0f; // orientar hacia museo
+			// Ajustes de posicionamiento
+			const glm::vec3 munecoWorldPos = glm::vec3(-20.0f, -2.0f, 70.0f);
+			const float munecoScale = 48.0f;
+			const float munecoRotYdeg = 180.0f;
 
 			model = glm::mat4(1.0f);
-			model = glm::translate(model, munecoWorldPos);                       // posicionar fuera del museo y a la izquierda
-			model = glm::rotate(model, munecoRotYdeg * toRadians, glm::vec3(0.0f, 1.0f, 0.0f)); // rotación Y
-			model = glm::scale(model, glm::vec3(munecoScale, munecoScale, munecoScale)); // escala uniforme (4x)
+			model = glm::translate(model, munecoWorldPos);
+			model = glm::rotate(model, munecoRotYdeg * toRadians, glm::vec3(0.0f, 1.0f, 0.0f));
+			model = glm::scale(model, glm::vec3(munecoScale, munecoScale, munecoScale));
 			glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+
+			// >>> IMPLEMENTACIÓN 3: Configuración del material para que se ilumine <<<
+			glUniform1f(uniformSpecularIntensity, 1.0f); // Intensidad alta para que el color se vea
+			glUniform1f(uniformShininess, 32.0f);        // Brillo decente
+			// >>> FIN IMPLEMENTACIÓN 3 <<<
+
+			munecoTexture.UseTexture();
 			Muneco_M.RenderModel();
 		}
 
