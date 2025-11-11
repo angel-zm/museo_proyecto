@@ -9,17 +9,17 @@ Model::Model()
 
 void Model::LoadModel(const std::string & fileName)
 {
-	Assimp::Importer importer;//					Pasa de Polygons y Quads a triangulos, modifica orden para el origen, generar normales si el  objeto no tiene, trata vértices iguales como 1 solo
+	Assimp::Importer importer;//						Pasa de Polygons y Quads a triangulos, modifica orden para el origen, generar normales si el  objeto no tiene, trata v?rtices iguales como 1 solo
 	//const aiScene *scene=importer.ReadFile(fileName,aiProcess_Triangulate |aiProcess_FlipUVs|aiProcess_GenSmoothNormals|aiProcess_JoinIdenticalVertices);
 	const aiScene *scene = importer.ReadFile(fileName, aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_JoinIdenticalVertices);
 	if (!scene)
-	{	
-		printf("Falló en cargar el modelo: %s \n", fileName.c_str(), importer.GetErrorString());
+	{    
+		printf("Fall? en cargar el modelo: %s \n", fileName.c_str(), importer.GetErrorString());
 		return;
 	}
 	LoadNode(scene->mRootNode, scene);
 	LoadMaterials(scene);
-	}
+}
 
 void Model::ClearModel()
 {
@@ -70,6 +70,10 @@ void Model::LoadNode(aiNode * node, const aiScene * scene)
 	for (unsigned int i = 0; i <node->mNumMeshes; i++)
 	{
 		LoadMesh(scene->mMeshes[node->mMeshes[i]], scene);
+		// store the mesh name associated with this node
+		meshNames.push_back(std::string(node->mName.C_Str()));
+		// default center
+		meshCenters.push_back(glm::vec3(0.0f));
 	}
 	for (unsigned int i = 0; i < node->mNumChildren; i++)
 	{
@@ -82,9 +86,11 @@ void Model::LoadMesh(aiMesh * mesh, const aiScene * scene)
 
 	std::vector<GLfloat> vertices;
 	std::vector<unsigned int> indices;
+	glm::vec3 center(0.0f);
 	for (unsigned int i = 0; i < mesh->mNumVertices; i++)
 	{
 		vertices.insert(vertices.end(), { mesh->mVertices[i].x,mesh->mVertices[i].y ,mesh->mVertices[i].z });
+		center += glm::vec3(mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z);
 		//UV
 		if (mesh->mTextureCoords[0])//si tiene coordenadas de texturizado
 		{
@@ -94,10 +100,11 @@ void Model::LoadMesh(aiMesh * mesh, const aiScene * scene)
 		{
 			vertices.insert(vertices.end(), { 0.0f,0.0f });
 		}
-		//Normals importante, las normales son negativas porque la luz interactúa con ellas de esa forma, cómo se vio con el 
+		//Normals importante, las normales son negativas porque la luz interact?a con ellas de esa forma, c?mo se vio con el 
 		
 		vertices.insert(vertices.end(), { -mesh->mNormals[i].x,-mesh->mNormals[i].y ,-mesh->mNormals[i].z });
 	}
+	if (mesh->mNumVertices > 0) center /= (float)mesh->mNumVertices;
 	for (unsigned int i = 0; i < mesh->mNumFaces; i++)
 	{
 		aiFace face = mesh->mFaces[i];
@@ -111,6 +118,7 @@ void Model::LoadMesh(aiMesh * mesh, const aiScene * scene)
 	newMesh->CreateMesh(&vertices[0], &indices[0], vertices.size(), indices.size());
 	MeshList.push_back(newMesh);
 	meshTotex.push_back(mesh->mMaterialIndex);
+	meshCenters.push_back(center);
 }
 
 void Model::LoadMaterials(const aiScene * scene)
@@ -130,7 +138,7 @@ void Model::LoadMaterials(const aiScene * scene)
 				if (std::string(path.data).rfind("/"))
 				{
 					//printf("entre a 1 / \n");
-					idx = std::string(path.data).rfind("/");//para quitar del path del modelo todo lo que este antes del \ de ubicación de directorio
+					idx = std::string(path.data).rfind("/");//para quitar del path del modelo todo lo que este antes del \ de ubicaci?n de directorio
 					//printf("\npath: %s\n", std::string(path.data).c_str());
 					filename = std::string(path.data).substr(idx + 1);
 					//printf("\nfilename: %s\n", filename.c_str());
@@ -155,7 +163,7 @@ void Model::LoadMaterials(const aiScene * scene)
 				{
 					if (!TextureList[i]->LoadTextureA())
 					{
-						printf("Falló en cargar la Textura :%s\n", texPath.c_str());
+						printf("Fall? en cargar la Textura :%s\n", texPath.c_str());
 						delete TextureList[i];
 						TextureList[i] = nullptr;
 					}
@@ -164,7 +172,7 @@ void Model::LoadMaterials(const aiScene * scene)
 				{
 					if (!TextureList[i]->LoadTexture())
 					{
-						printf("Falló en cargar la Textura :%s\n", texPath.c_str());
+						printf("Fall? en cargar la Textura :%s\n", texPath.c_str());
 						delete TextureList[i];
 						TextureList[i] = nullptr;
 					}
@@ -173,9 +181,35 @@ void Model::LoadMaterials(const aiScene * scene)
 		}
 		if (!TextureList[i])
 		{
-			TextureList[i] = new Texture("Textures/plain.png"); //textura que se aplicará a los modelos si no tienen textura o la textura no se puede cargar
+			TextureList[i] = new Texture("Textures/plain.png"); //textura que se aplicar? a los modelos si no tienen textura o la textura no se puede cargar
 			TextureList[i]->LoadTextureA();
 		}
 
 	}
+}
+
+// New helper functions for per-mesh control
+size_t Model::GetMeshCount() const { return MeshList.size(); }
+
+std::string Model::GetMeshName(unsigned int index) const
+{
+	if (index < meshNames.size()) return meshNames[index];
+	return std::string();
+}
+
+void Model::RenderMesh(unsigned int index) const
+{
+	if (index >= MeshList.size()) return;
+	unsigned int materialIndex = meshTotex[index];
+	if (materialIndex < TextureList.size() && TextureList[materialIndex])
+	{
+		TextureList[materialIndex]->UseTexture();
+	}
+	MeshList[index]->RenderMesh();
+}
+
+glm::vec3 Model::GetMeshCenter(unsigned int index) const
+{
+	if (index < meshCenters.size()) return meshCenters[index];
+	return glm::vec3(0.0f);
 }
