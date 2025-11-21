@@ -1,0 +1,215 @@
+#include "Model.h"
+#include <iostream>
+
+
+
+Model::Model()
+{
+}
+
+void Model::LoadModel(const std::string & fileName)
+{
+	Assimp::Importer importer;//						Pasa de Polygons y Quads a triangulos, modifica orden para el origen, generar normales si el  objeto no tiene, trata v?rtices iguales como 1 solo
+	//const aiScene *scene=importer.ReadFile(fileName,aiProcess_Triangulate |aiProcess_FlipUVs|aiProcess_GenSmoothNormals|aiProcess_JoinIdenticalVertices);
+	const aiScene *scene = importer.ReadFile(fileName, aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_JoinIdenticalVertices);
+	if (!scene)
+	{    
+		printf("Fall? en cargar el modelo: %s \n", fileName.c_str(), importer.GetErrorString());
+		return;
+	}
+	LoadNode(scene->mRootNode, scene);
+	LoadMaterials(scene);
+}
+
+void Model::ClearModel()
+{
+	for (unsigned int i = 0; i < MeshList.size(); i++)
+	{
+		if (MeshList[i])
+		{
+			delete MeshList[i];
+			MeshList[i] = nullptr;
+
+		}
+	}
+
+	for (unsigned int i = 0; i < TextureList.size(); i++)
+	{
+		if (TextureList[i])
+		{
+			delete TextureList[i];
+			TextureList[i] = nullptr;
+		}
+	}
+
+}
+
+void Model::RenderModel()
+{
+	for (unsigned int i = 0; i < MeshList.size(); i++)
+	{
+		unsigned int materialIndex = meshTotex[i];
+		if (!materialIndex< TextureList.size()&& TextureList[materialIndex])
+		{
+			TextureList[materialIndex]->UseTexture();
+		}
+		MeshList[i]->RenderMesh();
+
+	}
+
+
+}
+
+
+Model::~Model()
+{
+}
+
+void Model::LoadNode(aiNode * node, const aiScene * scene)
+{
+	for (unsigned int i = 0; i <node->mNumMeshes; i++)
+	{
+		LoadMesh(scene->mMeshes[node->mMeshes[i]], scene);
+		// store the mesh name associated with this node
+		meshNames.push_back(std::string(node->mName.C_Str()));
+		// default center
+		meshCenters.push_back(glm::vec3(0.0f));
+	}
+	for (unsigned int i = 0; i < node->mNumChildren; i++)
+	{
+		LoadNode(node->mChildren[i], scene);
+	}
+}
+
+void Model::LoadMesh(aiMesh * mesh, const aiScene * scene)
+{
+
+	std::vector<GLfloat> vertices;
+	std::vector<unsigned int> indices;
+	glm::vec3 center(0.0f);
+	for (unsigned int i = 0; i < mesh->mNumVertices; i++)
+	{
+		vertices.insert(vertices.end(), { mesh->mVertices[i].x,mesh->mVertices[i].y ,mesh->mVertices[i].z });
+		center += glm::vec3(mesh->mVertices[i].x, mesh->mVertices[i].y, mesh->mVertices[i].z);
+		//UV
+		if (mesh->mTextureCoords[0])//si tiene coordenadas de texturizado
+		{
+			vertices.insert(vertices.end(), { mesh->mTextureCoords[0][i].x,mesh->mTextureCoords[0][i].y});
+		}
+		else
+		{
+			vertices.insert(vertices.end(), { 0.0f,0.0f });
+		}
+		//Normals importante, las normales son negativas porque la luz interact?a con ellas de esa forma, c?mo se vio con el 
+		
+		vertices.insert(vertices.end(), { -mesh->mNormals[i].x,-mesh->mNormals[i].y ,-mesh->mNormals[i].z });
+	}
+	if (mesh->mNumVertices > 0) center /= (float)mesh->mNumVertices;
+	for (unsigned int i = 0; i < mesh->mNumFaces; i++)
+	{
+		aiFace face = mesh->mFaces[i];
+		for (unsigned int j = 0; j < face.mNumIndices; j++)
+		{
+			indices.push_back(face.mIndices[j]);
+		}
+	}
+
+	Mesh* newMesh = new Mesh();
+	newMesh->CreateMesh(&vertices[0], &indices[0], vertices.size(), indices.size());
+	MeshList.push_back(newMesh);
+	meshTotex.push_back(mesh->mMaterialIndex);
+	meshCenters.push_back(center);
+}
+
+void Model::LoadMaterials(const aiScene * scene)
+{
+	TextureList.resize(scene->mNumMaterials);
+	for (unsigned int i = 0; i < scene ->mNumMaterials; i++)
+	{
+		aiMaterial* material = scene->mMaterials[i];
+		TextureList[i] = nullptr;
+		if (material->GetTextureCount(aiTextureType_DIFFUSE	))
+		{
+			aiString path;
+			if (material->GetTexture(aiTextureType_DIFFUSE,0,&path)==AI_SUCCESS)
+			{
+				int idx;
+				std::string filename;
+				if (std::string(path.data).rfind("/"))
+				{
+					//printf("entre a 1 / \n");
+					idx = std::string(path.data).rfind("/");//para quitar del path del modelo todo lo que este antes del \ de ubicaci?n de directorio
+					//printf("\npath: %s\n", std::string(path.data).c_str());
+					filename = std::string(path.data).substr(idx + 1);
+					//printf("\nfilename: %s\n", filename.c_str());
+
+				}
+				else if(std::string(path.data).rfind("\\"))
+				{
+					printf(" entre a 2 \n");
+					idx = std::string(path.data).rfind("\\");
+					filename = std::string(path.data).substr(idx + 1);
+					printf("\nfilename: %s\n", filename.c_str());
+				}
+				
+				
+				std::string tga ="tga";
+				std::string png = "png";
+				std::size_t existetga = filename.find(tga);
+				std::size_t existepng= filename.find(png);
+				std::string texPath = std::string("Textures/") + filename;
+				TextureList[i] = new Texture(texPath.c_str());
+				if (existetga != std::string::npos || existepng != std::string::npos)
+				{
+					if (!TextureList[i]->LoadTextureA())
+					{
+						printf("Fall? en cargar la Textura :%s\n", texPath.c_str());
+						delete TextureList[i];
+						TextureList[i] = nullptr;
+					}
+				}
+				else
+				{
+					if (!TextureList[i]->LoadTexture())
+					{
+						printf("Fall? en cargar la Textura :%s\n", texPath.c_str());
+						delete TextureList[i];
+						TextureList[i] = nullptr;
+					}
+				}
+			}
+		}
+		if (!TextureList[i])
+		{
+			TextureList[i] = new Texture("Textures/plain.png"); //textura que se aplicar? a los modelos si no tienen textura o la textura no se puede cargar
+			TextureList[i]->LoadTextureA();
+		}
+
+	}
+}
+
+// New helper functions for per-mesh control
+size_t Model::GetMeshCount() const { return MeshList.size(); }
+
+std::string Model::GetMeshName(unsigned int index) const
+{
+	if (index < meshNames.size()) return meshNames[index];
+	return std::string();
+}
+
+void Model::RenderMesh(unsigned int index) const
+{
+	if (index >= MeshList.size()) return;
+	unsigned int materialIndex = meshTotex[index];
+	if (materialIndex < TextureList.size() && TextureList[materialIndex])
+	{
+		TextureList[materialIndex]->UseTexture();
+	}
+	MeshList[index]->RenderMesh();
+}
+
+glm::vec3 Model::GetMeshCenter(unsigned int index) const
+{
+	if (index < meshCenters.size()) return meshCenters[index];
+	return glm::vec3(0.0f);
+}
